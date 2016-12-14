@@ -1,36 +1,62 @@
 #!/bin/sh
 
+#Author : Mouhamad KOREISSI
+#Student at UCP
+
 #This script does : 
-#  - creates a github repository with a repository name as the current directory
-#  - add all the files of the directory to the repo
-#  - push it
+#  - Create a github repository with a repository name as the current directory via the github API
+#  - Add all the files of the directory to the repo
+#  - Push it
 
 usage() {
-    echo "$0 [private]"
+    echo "$0 [username] [private]"
 }
 
-if [ $# -gt 1 ]; then
+if [ $# -gt 2 ]; then
     usage
     exit 1
 fi
 
 path=`pwd`
 repo_name=`basename $path`
-#username=`git config github.user`
-username="koreissm"
+username=""
+
+#Choosing the scope of the repo (public or private)
 private="false"
-if [ $1 = "private" ]; then
+if [ ! -z $2 -a "$2" = "private" ]; then
     private="true"
 fi
 
-#token=`git config github.token`
-echo "Creating the repository..."
+#if a username is given the script will use it, otherwise will use the default user in the system
+if [ -z $1 ]; then
+    username=`git config github.user`
+    if [ $username = "" ]; then
+        echo "Empty username given"
+        exit 2
+    fi
+else
+    username=$1
+fi
+
+#use a token if one is given, need the password otherwise
+token=`git config github.token`
+if [ $token = "" ]; then
+    credentials="$username"    
+else
+    credentials="$username:$token"    
+fi
+
+echo "$path, $repo_name, $username, $credentials"
+
+echo "Creating the repository $repo_name on Github..."
 echo "Enter password : "
-curl -u "$username" https://api.github.com/user/repos -d '{"name":"'$repo_name'", "private":'$private'}' > /dev/null 2>&1
+curl -u "$credentials" https://api.github.com/user/repos -d '{"name":"'$repo_name'", "private":'$private'}' > /dev/null 2>&1
 git init
 git add .
 git commit -m "First commit"
-git remote add origin https://www.github.com/koreissm/$repo_name
+echo "Pushing files to Github..."
+git remote add origin https://www.github.com/$username/$repo_name
 git remote -v
 git push -u origin master
 
+echo "Done."
