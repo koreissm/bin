@@ -10,34 +10,50 @@
 
 usage() {
     echo "$0 [username] [private]"
+    exit 2
 }
 
-if [ $# -gt 2 ]; then
-    usage
-    exit 1
-fi
+#if [ $# -gt 2 ]; then
+#    usage
+#    exit 1
+#fi
 
 path=`pwd`
 repo_name=`basename $path`
-username=""
+private=""
+# u => username, p => private, P => Public
+while getopts "u:s:" option; do
+    case "${option}" in
+        u) username=${OPTARG} ;;
+        s) scope=${OPTARG} ;; 
+        *) usage ;;
+    esac
+done
+shift $((OPTIND-1))
 
 #Choosing the scope of the repo (public or private)
-private="false"
-if [ ! -z $2 -a "$2" = "private" ]; then
+if [ "$scope" == "private" ]; then
     private="true"
+else
+    if [ "$scope" == "public" ]; then
+        private="false"
+    fi
 fi
 
 #if a username is given the script will use it, otherwise will use the default user in the system
-if [ -z $1 ]; then
+if [ ! -z "$username" -a "$username" != "" ]; then
     username=`git config github.user`
     if [ $username = "" ]; then
-        echo "Empty username given"
-        exit 2
+        usage
     fi
 else
-    username=$1
+    usage
 fi
 
+echo "username : $username"
+echo "scope : $scope"
+echo "private : $private"
+exit 0
 #use a token if one is given, need the password otherwise
 token=`git config github.token`
 if [ $token = "" ]; then
