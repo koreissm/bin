@@ -9,18 +9,13 @@
 #  - Push it
 
 usage() {
-    echo "$0 [username] [private]"
+    echo "$0 -s scope [-u username]"
     exit 2
 }
 
-#if [ $# -gt 2 ]; then
-#    usage
-#    exit 1
-#fi
-
 path=`pwd`
 repo_name=`basename $path`
-private=""
+
 # u => username, p => private, P => Public
 while getopts "u:s:" option; do
     case "${option}" in
@@ -40,7 +35,7 @@ else
     fi
 fi
 
-#if a username is given the script will use it, otherwise will use the default user in the system
+#if a username is given the script will use it, otherwise will use the default git user in the system
 if [ ! -z "$username" -a "$username" != "" ]; then
     username=`git config github.user`
     if [ $username = "" ]; then
@@ -50,23 +45,20 @@ else
     usage
 fi
 
-echo "username : $username"
-echo "scope : $scope"
-echo "private : $private"
-exit 0
-#use a token if one is given, need the password otherwise
+#use a token if one is available, need the password otherwise
 token=`git config github.token`
-if [ $token = "" ]; then
-    credentials="$username"    
-else
-    credentials="$username:$token"    
-fi
-
-echo "$path, $repo_name, $username, $credentials"
+[ -z $token ] && credentials="$username"
+[ ! -z $token ] && credentials="$username:$token"
 
 echo "Creating the repository $repo_name on Github..."
-echo "Enter password : "
+
+#Ask the password if token is not provided
+[ -z $token ] && echo "Enter password : "
+
 curl -u "$credentials" https://api.github.com/user/repos -d '{"name":"'$repo_name'", "private":'$private'}' > /dev/null 2>&1
+#Exit if repo couldn't be created
+[ $? -ne 0 ] && echo "Error : repo couldn't be created, check if internet connection available" && exit 3 
+
 git init
 git add .
 git commit -m "First commit"
@@ -74,5 +66,6 @@ echo "Pushing files to Github..."
 git remote add origin https://www.github.com/$username/$repo_name
 git remote -v
 git push -u origin master
+[ $? -ne 0 ] && echo "Error : couldn't push, check if internet connection available" && exit 3 
 
-echo "Done."
+echo "Repository $repo_name created."
